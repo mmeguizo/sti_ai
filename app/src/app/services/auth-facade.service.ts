@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '@auth0/auth0-angular';
 import { catchError, map, of, switchMap, take } from 'rxjs';
 import { appSettings, isAuth0Configured } from '../app.settings';
+import { environment } from '../../environments/environment';
 
 export interface AppUser {
   auth0UserId: string;
@@ -19,7 +20,7 @@ export interface AppUser {
 export class AuthFacadeService {
   private readonly auth0 = inject(AuthService, { optional: true });
   private readonly http = inject(HttpClient);
-  private readonly apiBaseUrl = 'http://localhost:3000';
+  private readonly apiBaseUrl = environment.apiUrl;
   readonly isConfigured = isAuth0Configured();
   readonly authDomain = appSettings.auth0.domain;
   readonly isLoading$ = this.auth0?.isLoading$ ?? of(false);
@@ -27,6 +28,16 @@ export class AuthFacadeService {
   readonly user$ = this.auth0?.user$ ?? of(null);
   readonly error$ = this.auth0?.error$ ?? of(null);
   readonly syncError = signal<string | null>(null);
+
+  /**
+   * Emits the raw Auth0 ID token string, or null if unavailable.
+   * Used by ChatService to authenticate requests to the backend.
+   */
+  readonly rawToken$ = !this.auth0
+    ? of(null as string | null)
+    : this.auth0.idTokenClaims$.pipe(
+        map((claims) => (claims as { __raw?: string } | null)?.__raw ?? null),
+      );
 
   readonly appUser$ = this.user$.pipe(
     switchMap((user) => {

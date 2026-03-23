@@ -70,6 +70,42 @@ $ mau deploy
 
 With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 
+## AI concurrency guard
+
+The chat endpoint now uses a simple in-memory concurrency guard around Hugging Face requests.
+
+What it does:
+
+- Limits how many AI calls run at the same time
+- Queues a small number of extra requests instead of sending everything to the provider immediately
+- Rejects requests if the queue is already full
+- Times out slow AI calls so one request does not hang forever
+
+Useful environment variables:
+
+```bash
+AI_MAX_CONCURRENT_REQUESTS=4
+AI_MAX_QUEUE_SIZE=20
+AI_QUEUE_WAIT_TIMEOUT_MS=15000
+AI_REQUEST_TIMEOUT_MS=70000
+```
+
+How to think about them:
+
+- `AI_MAX_CONCURRENT_REQUESTS`: how many Hugging Face requests can be active at once
+- `AI_MAX_QUEUE_SIZE`: how many extra chat requests can wait in line
+- `AI_QUEUE_WAIT_TIMEOUT_MS`: how long a queued request can wait before the API rejects it
+- `AI_REQUEST_TIMEOUT_MS`: how long one AI request can run before timing out
+
+Suggested local demo values:
+
+```bash
+AI_MAX_CONCURRENT_REQUESTS=3
+AI_MAX_QUEUE_SIZE=10
+AI_QUEUE_WAIT_TIMEOUT_MS=12000
+AI_REQUEST_TIMEOUT_MS=70000
+```
+
 ## Resources
 
 Check out a few resources that may come in handy when working with NestJS:

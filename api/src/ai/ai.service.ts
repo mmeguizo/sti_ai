@@ -43,8 +43,19 @@ export class AiService {
       4,
     );
     this.maxQueuedRequests = this.getNumericEnv('AI_MAX_QUEUE_SIZE', 20);
-    this.queueWaitTimeoutMs = this.getNumericEnv('AI_QUEUE_WAIT_TIMEOUT_MS', 15000);
-    this.inferenceTimeoutMs = this.getNumericEnv('AI_REQUEST_TIMEOUT_MS', 70000);
+    this.queueWaitTimeoutMs = this.getNumericEnv(
+      'AI_QUEUE_WAIT_TIMEOUT_MS',
+      15000,
+    );
+    this.inferenceTimeoutMs = this.getNumericEnv(
+      'AI_REQUEST_TIMEOUT_MS',
+      70000,
+    );
+  }
+
+  /** The primary model name currently configured for this service. */
+  get activeModel(): string {
+    return this.model;
   }
 
   async generateChatResponse(message: string): Promise<string> {
@@ -56,7 +67,9 @@ export class AiService {
     );
   }
 
-  private async generateChatResponseFromModels(message: string): Promise<string> {
+  private async generateChatResponseFromModels(
+    message: string,
+  ): Promise<string> {
     const modelsToTry = [this.model, ...this.fallbackModels].filter(
       (model, index, arr) => arr.indexOf(model) === index,
     );
@@ -74,7 +87,7 @@ export class AiService {
                 content: message,
               },
             ],
-            max_tokens: 400,
+            max_tokens: 1500,
           });
 
           const generatedText = result?.choices?.[0]?.message?.content;
@@ -141,7 +154,9 @@ export class AiService {
     await new Promise<void>((resolve, reject) => {
       const queueId = ++this.queueSequence;
       const timeoutHandle = setTimeout(() => {
-        const queueIndex = this.waitingQueue.findIndex((entry) => entry.id === queueId);
+        const queueIndex = this.waitingQueue.findIndex(
+          (entry) => entry.id === queueId,
+        );
         if (queueIndex >= 0) {
           this.waitingQueue.splice(queueIndex, 1);
         }

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '@auth0/auth0-angular';
 import { Observable, switchMap, take, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AdminUserRecord {
   auth0UserId: string;
@@ -31,7 +32,7 @@ export interface AdminUserListResponse {
 export class AdminUsersService {
   private readonly http = inject(HttpClient);
   private readonly auth0 = inject(AuthService);
-  private readonly apiBaseUrl = 'http://localhost:3000';
+  private readonly apiBaseUrl = environment.apiUrl;
 
   listUsers(search: string, page: number, pageSize: number): Observable<AdminUserListResponse> {
     const searchParams = new URLSearchParams({

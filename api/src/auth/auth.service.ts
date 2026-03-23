@@ -70,6 +70,19 @@ export class AuthSyncService {
     this.auth0ClientId = auth0ClientId;
   }
 
+  /**
+   * Verifies a raw Auth0 ID token and returns the user's auth0 sub (user ID).
+   * Used by other controllers that need to identify the caller without a full sync.
+   */
+  async getUserIdFromToken(rawToken: string): Promise<string> {
+    const claims = await this.verifyIdToken(rawToken);
+    const sub = claims.sub;
+    if (!sub) {
+      throw new UnauthorizedException('Invalid token: missing subject claim.');
+    }
+    return sub;
+  }
+
   async syncFromAuth0Token(rawToken: string): Promise<SyncedUser> {
     const claims = await this.verifyIdToken(rawToken);
 

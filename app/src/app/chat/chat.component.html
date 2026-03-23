@@ -1,51 +1,92 @@
-<div class="chat-container">
-  <div class="chat-header">
-    <h1>Meguizo Class Ai chat</h1>
-  </div>
-
-  <div class="chat-messages" #messagesContainer>
-    @for (message of messages(); track $index) {
-      <div [ngClass]="message.sender === 'user' ? 'message user-message' : 'message bot-message'">
-        @if (message.sender === 'user') {
-          <p>{{ message.text }}</p>
-        } @else {
-          <div class="bot-markdown" [innerHTML]="renderBotMarkdown(message.text)"></div>
-        }
-      </div>
-    }
-    @if (isLoading()) {
-      <div class="message bot-message loading">
-        <div class="thinking-row">
-          <span>{{ loadingLabel() }}</span>
-          <span class="thinking-dots" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </span>
-        </div>
-      </div>
-    }
-  </div>
-
-  @if (error()) {
-    <div class="error-message">
-      {{ error() }}
+<div class="chat-shell" [class.sidebar-collapsed]="!sidebarOpen()">
+  <!-- ── Sidebar ── -->
+  <aside class="chat-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Chats</span>
+      <button class="icon-btn" (click)="toggleSidebar()" title="Collapse sidebar">&#8249;</button>
     </div>
+
+    <button class="new-chat-btn" (click)="newChat()">+ New Chat</button>
+
+    <div class="session-list">
+      @if (historyLoading()) {
+        <p class="sidebar-hint">Loading…</p>
+      } @else if (chatSessions().length === 0) {
+        <p class="sidebar-hint">No past chats yet.</p>
+      } @else {
+        @for (session of chatSessions(); track session.id) {
+          <button
+            class="session-item"
+            [class.active]="activeChatId() === session.id"
+            (click)="openChat(session)"
+            [title]="session.title"
+          >
+            <span class="session-title">{{ session.title }}</span>
+            <span class="session-date">{{ sessionDateLabel(session.lastMessageAt) }}</span>
+          </button>
+        }
+      }
+    </div>
+  </aside>
+
+  <!-- ── Sidebar collapsed toggle ── -->
+  @if (!sidebarOpen()) {
+    <button class="sidebar-open-btn" (click)="toggleSidebar()" title="Open sidebar">&#8250;</button>
   }
 
-  <div class="chat-input-area">
-    <input
-      type="text"
-      [(ngModel)]="messageInput"
-      (keyup.enter)="sendMessage()"
-      [disabled]="isLoading()"
-      placeholder="Type a message..."
-      class="chat-input"
-    />
-    <button
-      (click)="sendMessage()"
-      [disabled]="isLoading() || !messageInput().trim()"
-      class="send-button"
-    >
-      Send
-    </button>
+  <!-- ── Main chat area ── -->
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>Meguizo Class Ai chat</h1>
+    </div>
+
+    <div class="chat-messages" #messagesContainer>
+      @if (messages().length === 0 && !isLoading()) {
+        <div class="empty-hint">Start a new conversation or pick one from the sidebar.</div>
+      }
+      @for (message of messages(); track $index) {
+        <div [ngClass]="message.sender === 'user' ? 'message user-message' : 'message bot-message'">
+          @if (message.sender === 'user') {
+            <p>{{ message.text }}</p>
+          } @else {
+            <div class="bot-markdown" [innerHTML]="renderBotMarkdown(message.text)"></div>
+          }
+        </div>
+      }
+      @if (isLoading()) {
+        <div class="message bot-message loading">
+          <div class="thinking-row">
+            <span>{{ loadingLabel() }}</span>
+            <span class="thinking-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (error()) {
+      <div class="error-message">
+        {{ error() }}
+      </div>
+    }
+
+    <div class="chat-input-area">
+      <input
+        type="text"
+        [(ngModel)]="messageInput"
+        (keyup.enter)="sendMessage()"
+        [disabled]="isLoading()"
+        placeholder="Type a message..."
+        class="chat-input"
+      />
+      <button
+        (click)="sendMessage()"
+        [disabled]="isLoading() || !messageInput().trim()"
+        class="send-button"
+      >
+        Send
+      </button>
+    </div>
   </div>
 </div>
