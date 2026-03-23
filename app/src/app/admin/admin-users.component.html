@@ -1,0 +1,139 @@
+<section class="admin-panel">
+  <div class="admin-panel-header">
+    <div>
+      <div class="admin-label">Admin</div>
+      <h2>User Access Table</h2>
+      <p>Search by email, display name, role, status, or hidden Auth0 ID.</p>
+    </div>
+
+    <div class="admin-search-row">
+      <input
+        type="text"
+        [ngModel]="searchInput()"
+        (ngModelChange)="searchInput.set($event)"
+        (keyup.enter)="applySearch()"
+        placeholder="Search user ID, email, display name..."
+        class="admin-search-input"
+      />
+      <button type="button" class="admin-action-button primary" (click)="applySearch()">
+        Search
+      </button>
+      <button type="button" class="admin-action-button" (click)="clearSearch()">Clear</button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error" role="alert">{{ error() }}</div>
+  }
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="5" class="state-cell">Loading users...</td>
+          </tr>
+        } @else if (users().length === 0) {
+          <tr>
+            <td colspan="5" class="state-cell">No users found for the current search.</td>
+          </tr>
+        } @else {
+          @for (user of users(); track trackByUserId($index, user)) {
+            <tr>
+              <td>
+                <div class="user-meta">
+                  <div class="user-name">{{ user.displayName }}</div>
+                  <div class="user-email">{{ user.email || 'No email returned' }}</div>
+                  <div class="user-subtle-id">{{ user.auth0UserId }}</div>
+                </div>
+              </td>
+              <td>
+                <span class="chip role">{{ user.role }}</span>
+              </td>
+              <td>
+                <span
+                  class="chip status"
+                  [class.active]="user.status === 'active'"
+                  [class.disabled]="user.status === 'disabled'"
+                >
+                  {{ user.status }}
+                </span>
+              </td>
+              <td>{{ user.lastLoginAt ? (user.lastLoginAt | date: 'medium') : 'Never' }}</td>
+              <td>
+                <div class="action-grid">
+                  <button
+                    type="button"
+                    class="mini-button success"
+                    [disabled]="busyUserId() === user.auth0UserId || user.status === 'active'"
+                    (click)="setStatus(user, 'active')"
+                  >
+                    Activate
+                  </button>
+                  <button
+                    type="button"
+                    class="mini-button warn"
+                    [disabled]="busyUserId() === user.auth0UserId || user.status === 'disabled'"
+                    (click)="setStatus(user, 'disabled')"
+                  >
+                    Disable
+                  </button>
+                  <button
+                    type="button"
+                    class="mini-button"
+                    [disabled]="busyUserId() === user.auth0UserId || user.role === 'admin'"
+                    (click)="setRole(user, 'admin')"
+                  >
+                    Make Admin
+                  </button>
+                  <button
+                    type="button"
+                    class="mini-button"
+                    [disabled]="busyUserId() === user.auth0UserId || user.role === 'user'"
+                    (click)="setRole(user, 'user')"
+                  >
+                    Make User
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-row">
+    <div class="pagination-meta">
+      Page {{ page() }} of {{ totalPages() }}
+      <span class="pagination-total">{{ total() }} total users</span>
+    </div>
+    <div class="pagination-actions">
+      <button
+        type="button"
+        class="admin-action-button"
+        [disabled]="page() <= 1 || isLoading()"
+        (click)="goToPreviousPage()"
+      >
+        Previous
+      </button>
+      <button
+        type="button"
+        class="admin-action-button"
+        [disabled]="page() >= totalPages() || isLoading()"
+        (click)="goToNextPage()"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</section>

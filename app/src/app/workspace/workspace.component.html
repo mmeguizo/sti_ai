@@ -1,0 +1,74 @@
+@if (auth.appUser$ | async; as appUser) {
+  <section class="workspace-shell">
+    <header class="workspace-header">
+      <div>
+        <div class="workspace-label">Signed In</div>
+        <h1>{{ appUser.displayName }}</h1>
+        <p>{{ appUser.email }}</p>
+      </div>
+
+      <div class="workspace-actions">
+        <div class="user-badges">
+          <span class="badge role">{{ appUser.role }}</span>
+          <span class="badge status" [class.active]="appUser.status === 'active'">
+            {{ appUser.status }}
+          </span>
+        </div>
+        @if (appUser.role === 'admin') {
+          <button type="button" class="admin-toggle-button" (click)="toggleAdminView()">
+            {{ isAdminView ? 'Chat' : 'Users' }}
+          </button>
+        }
+        <button type="button" class="logout-button" (click)="auth.logout()">Log Out</button>
+      </div>
+    </header>
+
+    @if (appUser.status !== 'active') {
+      <div class="approval-banner" role="status" aria-live="polite">
+        <strong>Account pending approval.</strong>
+        <span>
+          Your login worked, but chat access should stay limited until you mark this user as active
+          in Supabase.
+        </span>
+      </div>
+    }
+
+    @if (auth.syncError(); as syncError) {
+      <div class="sync-error-banner" role="alert">
+        <strong>User sync failed.</strong>
+        <span>{{ syncError }}</span>
+      </div>
+    }
+
+    @if (appUser.role === 'admin' && isAdminView) {
+      <app-admin-users></app-admin-users>
+    } @else {
+      <div class="chat-stage">
+        <app-chat></app-chat>
+      </div>
+    }
+  </section>
+} @else if (auth.user$ | async; as rawUser) {
+  <section class="workspace-shell">
+    <header class="workspace-header">
+      <div>
+        <div class="workspace-label">Signed In</div>
+        <h1>{{ rawUser.name || rawUser.nickname || 'Authenticated user' }}</h1>
+        <p>{{ rawUser.email || rawUser.sub }}</p>
+      </div>
+
+      <div class="workspace-actions">
+        <button type="button" class="logout-button" (click)="auth.logout()">Log Out</button>
+      </div>
+    </header>
+
+    <div class="approval-banner" role="status" aria-live="polite">
+      <strong>Login succeeded.</strong>
+      <span>
+        Auth0 returned a user session, but the profile is missing some fields your app expects. This
+        usually means the provider did not return an email or the Auth0 connection needs the email
+        scope.
+      </span>
+    </div>
+  </section>
+}

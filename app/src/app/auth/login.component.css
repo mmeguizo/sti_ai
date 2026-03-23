@@ -1,0 +1,132 @@
+.login-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.28), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.24), transparent 28%),
+    linear-gradient(135deg, #0f172a 0%, #111827 42%, #1f2937 100%);
+}
+
+.login-panel {
+  width: min(960px, 100%);
+  padding: 2.2rem;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.25);
+}
+
+.eyebrow {
+  display: inline-flex;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-panel h1 {
+  margin: 1rem 0 0.8rem;
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: #0f172a;
+}
+
+.lead {
+  max-width: 52rem;
+  margin: 0 0 1.6rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #334155;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.6rem;
+}
+
+.feature-card {
+  padding: 1rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  border: 1px solid #dbeafe;
+}
+
+.feature-card h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.feature-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.setup-notice {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  border-radius: 16px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+
+.auth-error {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  border-radius: 16px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.login-button {
+  border: none;
+  border-radius: 999px;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.24);
+}
+
+.login-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.login-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+@media (max-width: 820px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    padding: 1.4rem;
+  }
+}

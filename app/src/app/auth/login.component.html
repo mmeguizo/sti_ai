@@ -1,0 +1,57 @@
+<section class="login-page">
+  <div class="login-panel">
+    <div class="eyebrow">Auth0 + Supabase</div>
+    <h1>Secure access for your AI chat workspace</h1>
+    <p class="lead">
+      Users sign in through Auth0 Universal Login. Google and any other enabled identity providers
+      are configured in Auth0, not in the Angular page.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h2>Single entry point</h2>
+        <p>
+          One login button. Auth0 decides whether the user signs in with Google, Microsoft, GitHub,
+          or email.
+        </p>
+      </div>
+      <div class="feature-card">
+        <h2>Approval workflow</h2>
+        <p>New users stay pending by default until you activate them in Supabase.</p>
+      </div>
+      <div class="feature-card">
+        <h2>Chat history ready</h2>
+        <p>
+          We are structuring the app for chat sessions and messages so loading old conversations
+          stays simple.
+        </p>
+      </div>
+    </div>
+
+    @if (!auth.isConfigured) {
+      <div class="setup-notice">
+        <strong>Setup required.</strong>
+        <span>
+          Fill in the Auth0 domain and client ID in app/src/app/app.settings.ts before enabling
+          login.
+        </span>
+      </div>
+    }
+
+    @if (auth.error$ | async; as authError) {
+      <div class="auth-error" role="alert">
+        <strong>Auth0 login error.</strong>
+        <span>{{ getAuthErrorMessage(authError) }}</span>
+      </div>
+    }
+
+    <button
+      class="login-button"
+      type="button"
+      (click)="auth.login()"
+      [disabled]="!auth.isConfigured"
+    >
+      Continue To Login
+    </button>
+  </div>
+</section>
