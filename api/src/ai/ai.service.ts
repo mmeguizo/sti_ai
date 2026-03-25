@@ -67,6 +67,76 @@ export class AiService {
     );
   }
 
+  /**
+   * Sends a pre-composed prompt (with ticket context already embedded)
+   * to the model using a system + user message pair so the model
+   * stays grounded in the provided data.
+   */
+  async generateTicketChatResponse(composedPrompt: string): Promise<string> {
+    return this.runWithConcurrencyGuard(async () =>
+      this.runWithTimeout(
+        () => this.generateTicketResponseFromModels(composedPrompt),
+        this.inferenceTimeoutMs,
+      ),
+    );
+  }
+
+  private async generateTicketResponseFromModels(
+    composedPrompt: string,
+  ): Promise<string> {
+    const modelsToTry = [this.model, ...this.fallbackModels].filter(
+      (model, index, arr) => arr.indexOf(model) === index,
+    );
+
+    try {
+      for (const model of modelsToTry) {
+        try {
+          console.log('Calling HF (ticket) with model:', model);
+
+          const result = await this.hf.chatCompletion({
+            model,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are an IT Support Ticket analyst. Answer ONLY from the ticket data the user provides. Never use outside knowledge. If the data does not contain the answer, say so.',
+              },
+              {
+                role: 'user',
+                content: composedPrompt,
+              },
+            ],
+            max_tokens: 1500,
+          });
+
+          const generatedText = result?.choices?.[0]?.message?.content;
+          if (generatedText?.trim()) {
+            return generatedText.trim();
+          }
+        } catch (error) {
+          if (this.isModelNotSupportedError(error)) {
+            console.warn(
+              `HF model not supported by enabled provider: ${model}`,
+            );
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw new Error(
+        'No configured Hugging Face models are supported by your enabled provider.',
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error('=== HUGGING FACE TICKET API ERROR ===');
+      console.error('Error message:', errorMessage);
+      console.error('=============================');
+      throw error;
+    }
+  }
+
   private async generateChatResponseFromModels(
     message: string,
   ): Promise<string> {
