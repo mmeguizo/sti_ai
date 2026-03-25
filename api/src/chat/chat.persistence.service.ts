@@ -50,6 +50,7 @@ export class ChatPersistenceService {
     userMessage: string,
     aiReply: string,
     model: string,
+    chatType: 'general' | 'ticket' = 'general',
   ): Promise<string> {
     let activeChatId = chatId;
 
@@ -62,7 +63,7 @@ export class ChatPersistenceService {
 
       const { data, error } = await this.supabase
         .from('chats')
-        .insert({ user_id: auth0UserId, title })
+        .insert({ user_id: auth0UserId, title, chat_type: chatType })
         .select('id')
         .single();
 
@@ -106,12 +107,16 @@ export class ChatPersistenceService {
   }
 
   /** Returns all active chats for a user, newest first. */
-  async listChats(auth0UserId: string): Promise<ChatSession[]> {
+  async listChats(
+    auth0UserId: string,
+    chatType: 'general' | 'ticket' = 'general',
+  ): Promise<ChatSession[]> {
     const { data, error } = await this.supabase
       .from('chats')
       .select('id, title, last_message_at, created_at')
       .eq('user_id', auth0UserId)
       .eq('status', 'active')
+      .eq('chat_type', chatType)
       .order('last_message_at', { ascending: false })
       .limit(50);
 

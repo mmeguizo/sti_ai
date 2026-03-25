@@ -23,6 +23,7 @@ create table if not exists public.chats (
     id uuid primary key default gen_random_uuid(),
     user_id text not null references public.app_users (auth0_user_id) on delete cascade,
     title text not null default 'New chat',
+    chat_type text not null default 'general' check (chat_type in ('general', 'ticket')),
     status text not null default 'active' check (status in ('active', 'archived')),
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
@@ -75,4 +76,5 @@ comment on table public.chat_messages is 'Messages belonging to a chat session.'
 comment on column public.app_users.auth0_user_id is 'Auth0 sub claim, for example auth0|abc123 or google-oauth2|abc123.';
 comment on column public.app_users.status is 'Active users can access the app immediately. Disabled users stay blocked.';
 comment on column public.chats.title is 'Short title shown in the chat list.';
+comment on column public.chats.chat_type is 'general = freeform AI chat, ticket = IT support ticket NL-SQL chat.';
 comment on column public.chat_messages.metadata is 'Optional message payload for future citations, tool calls, or structured output.';

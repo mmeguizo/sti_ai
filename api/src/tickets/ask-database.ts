@@ -14,9 +14,7 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
 import { PromptTemplate } from '@langchain/core/prompts';
-import { RunnableSequence } from '@langchain/core/runnables';
-import { StringOutputParser } from '@langchain/core/output_parsers';
-import { HuggingFaceInference } from '@langchain/community/llms/hf';
+import { HfInference } from '@huggingface/inference';
 import * as mysql from 'mysql2/promise';
 
 // ─── Prompt templates ──────────────────────────────────────────────
@@ -153,17 +151,21 @@ export async function askDatabase(question: string): Promise<string> {
       throw new Error(`Could not read schema for table ${TABLE_NAME}`);
     }
 
-    // 2 ── LangChain LLM + output parser
-    const llm = new HuggingFaceInference({
-      model: hfModel,
-      apiKey: hfToken,
-      maxTokens: 512,
-    });
-    const parser = new StringOutputParser();
+    // 2 ── HuggingFace client (uses chatCompletion — conversational task)
+    const hf = new HfInference(hfToken);
 
-    // 3 ── Generate SQL via LangChain chain
-    const sqlChain = RunnableSequence.from([SQL_PROMPT, llm, parser]);
-    const rawSql = await sqlChain.invoke({ schema, question });
+    async function callHf(prompt: string): Promise<string> {
+      const result = await hf.chatCompletion({
+        model: hfModel,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1024,
+      });
+      return result?.choices?.[0]?.message?.content?.trim() ?? '';
+    }
+
+    // 3 ── Generate SQL via prompt template + chatCompletion
+    const sqlPrompt = await SQL_PROMPT.format({ schema, question });
+    const rawSql = await callHf(sqlPrompt);
     const sql = extractSql(rawSql);
 
     console.log('[askDatabase] Generated SQL:', sql);
@@ -175,9 +177,9 @@ export async function askDatabase(question: string): Promise<string> {
     const [rows] = await conn.query(sql);
     const results = JSON.stringify(rows, null, 2).slice(0, 4000);
 
-    // 6 ── Format natural-language answer via LangChain chain
-    const answerChain = RunnableSequence.from([ANSWER_PROMPT, llm, parser]);
-    const answer = await answerChain.invoke({ question, sql, results });
+    // 6 ── Format natural-language answer via chatCompletion
+    const answerPrompt = await ANSWER_PROMPT.format({ question, sql, results });
+    const answer = await callHf(answerPrompt);
 
     return answer.trim();
   } finally {

@@ -2,9 +2,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as mysql from 'mysql2/promise';
-import { HuggingFaceInference } from '@langchain/community/llms/hf';
-import { RunnableSequence } from '@langchain/core/runnables';
-import { StringOutputParser } from '@langchain/core/output_parsers';
+import { HfInference } from '@huggingface/inference';
 import {
   SQL_PROMPT,
   ANSWER_PROMPT,
@@ -16,7 +14,8 @@ import {
 export class NlSqlService implements OnModuleDestroy {
   private readonly logger = new Logger(NlSqlService.name);
   private readonly pool: mysql.Pool;
-  private readonly llm: HuggingFaceInference;
+  private readonly hf: HfInference;
+  private readonly model: string;
   private readonly table = 'synthetic_it_support_tickets';
   private schemaCache: string | null = null;
 
@@ -25,6 +24,11 @@ export class NlSqlService implements OnModuleDestroy {
     if (!token) {
       throw new Error('Missing HF_TOKEN in environment variables.');
     }
+
+    this.hf = new HfInference(token);
+    this.model =
+      this.configService.get<string>('HF_MODEL') ||
+      'meta-llama/Llama-3.1-8B-Instruct';
 
     this.pool = mysql.createPool({
       host: this.configService.get<string>('MYSQL_HOST', 'localhost'),
@@ -38,18 +42,24 @@ export class NlSqlService implements OnModuleDestroy {
       waitForConnections: true,
       connectionLimit: 3,
     });
-
-    this.llm = new HuggingFaceInference({
-      model:
-        this.configService.get<string>('HF_MODEL') ||
-        'meta-llama/Llama-3.1-8B-Instruct',
-      apiKey: token,
-      maxTokens: 512,
-    });
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.pool.end();
+  }
+
+  /**
+   * Calls HuggingFace chatCompletion (conversational task) —
+   * the same method that works in AiService.
+   */
+  private async callHuggingFace(prompt: string): Promise<string> {
+    const result = await this.hf.chatCompletion({
+      model: this.model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1024,
+    });
+
+    return result?.choices?.[0]?.message?.content?.trim() ?? '';
   }
 
   /**
@@ -67,20 +77,22 @@ export class NlSqlService implements OnModuleDestroy {
     const schema = await this.getSchema();
     console.log(`[nl-sql] 2. Table schema loaded (${schema.length} chars)`);
 
-    const parser = new StringOutputParser();
-
-    // Step 1 — Generate SQL
+    // Step 1 — Build the SQL-generation prompt via LangChain template
+    const sqlPromptText = await SQL_PROMPT.format({ schema, question });
     console.log(
-      '[nl-sql] 3. Sending question + schema to HuggingFace via LangChain...',
+      '[nl-sql] 3. Sending SQL prompt to HuggingFace chatCompletion...',
     );
-    const sqlChain = RunnableSequence.from([SQL_PROMPT, this.llm, parser]);
+    console.log(
+      `[nl-sql]    Prompt preview (first 300 chars): ${sqlPromptText.slice(0, 300)}`,
+    );
+
     let rawSql: string;
     try {
-      rawSql = await sqlChain.invoke({ schema, question });
+      rawSql = await this.callHuggingFace(sqlPromptText);
       console.log('[nl-sql] 4. Raw HuggingFace SQL response:', rawSql);
     } catch (err) {
       console.error(
-        '[nl-sql] ❌ LangChain/HuggingFace SQL generation FAILED:',
+        '[nl-sql] ❌ HuggingFace SQL generation FAILED:',
         err instanceof Error ? err.message : err,
       );
       console.error(
@@ -133,22 +145,23 @@ export class NlSqlService implements OnModuleDestroy {
     const results = JSON.stringify(rows, null, 2).slice(0, 4000);
 
     // Step 4 — Natural-language answer
+    const answerPromptText = await ANSWER_PROMPT.format({
+      question,
+      sql,
+      results,
+    });
     console.log('[nl-sql] 9. Sending results to HuggingFace for NL answer...');
-    const answerChain = RunnableSequence.from([
-      ANSWER_PROMPT,
-      this.llm,
-      parser,
-    ]);
+
     let answer: string;
     try {
-      answer = await answerChain.invoke({ question, sql, results });
+      answer = await this.callHuggingFace(answerPromptText);
       console.log(
         '[nl-sql] 10. HuggingFace NL answer:',
         answer.trim().slice(0, 500),
       );
     } catch (err) {
       console.error(
-        '[nl-sql] ❌ LangChain/HuggingFace answer formatting FAILED:',
+        '[nl-sql] ❌ HuggingFace answer formatting FAILED:',
         err instanceof Error ? err.message : err,
       );
       console.error(

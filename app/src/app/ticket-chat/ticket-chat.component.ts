@@ -1,11 +1,13 @@
-import { Component, effect, ElementRef, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, effect, ElementRef, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { TicketChatService } from '../services/ticket-chat.service';
+import { take } from 'rxjs';
+import { TicketChatService, TicketChatSession } from '../services/ticket-chat.service';
+import { AuthFacadeService } from '../services/auth-facade.service';
 
 interface Message {
   text: string;
@@ -19,12 +21,19 @@ interface Message {
   templateUrl: './ticket-chat.component.html',
   styleUrl: './ticket-chat.component.css',
 })
-export class TicketChatComponent {
+export class TicketChatComponent implements OnInit {
+  // ── chat messages ──────────────────────────────────────────────────────────
   messages = signal<Message[]>([]);
   messageInput = signal('');
   isLoading = signal(false);
   error = signal<string | null>(null);
-  loadingLabel = signal('Searching tickets');
+  loadingLabel = signal('Analyzing question');
+
+  // ── sidebar ────────────────────────────────────────────────────────────────
+  sidebarOpen = signal(true);
+  chatSessions = signal<TicketChatSession[]>([]);
+  activeChatId = signal<string | null>(null);
+  historyLoading = signal(false);
 
   @ViewChild('messagesContainer')
   private messagesContainer?: ElementRef<HTMLDivElement>;
@@ -32,6 +41,7 @@ export class TicketChatComponent {
 
   constructor(
     private ticketChatService: TicketChatService,
+    private authFacade: AuthFacadeService,
     private sanitizer: DomSanitizer,
   ) {
     effect(() => {
@@ -40,6 +50,67 @@ export class TicketChatComponent {
       queueMicrotask(() => this.scrollToBottom());
     });
   }
+
+  ngOnInit(): void {
+    this.loadChatHistory();
+  }
+
+  // ── sidebar actions ────────────────────────────────────────────────────────
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update((v) => !v);
+  }
+
+  /** Clears the current conversation so the user can start a new one. */
+  newChat(): void {
+    this.messages.set([]);
+    this.activeChatId.set(null);
+    this.error.set(null);
+    this.messageInput.set('');
+  }
+
+  /** Loads an old ticket chat session and shows it in the main panel. */
+  openChat(session: TicketChatSession): void {
+    if (this.activeChatId() === session.id) return;
+
+    this.authFacade.rawToken$.pipe(take(1)).subscribe((token) => {
+      if (!token) return;
+      this.historyLoading.set(true);
+      this.error.set(null);
+
+      this.ticketChatService.getChatMessages(session.id, token).subscribe({
+        next: (msgs) => {
+          this.activeChatId.set(session.id);
+          this.messages.set(
+            msgs.map((m) => ({
+              text: m.content,
+              sender: m.senderRole === 'user' ? 'user' : 'bot',
+            })),
+          );
+          this.historyLoading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to load chat. Please try again.');
+          console.error('Load ticket chat error:', err);
+          this.historyLoading.set(false);
+        },
+      });
+    });
+  }
+
+  /** Reloads the sidebar list. */
+  private loadChatHistory(): void {
+    this.authFacade.rawToken$.pipe(take(1)).subscribe((token) => {
+      if (!token) return;
+
+      this.ticketChatService.getChatList(token).subscribe({
+        next: (sessions) => this.chatSessions.set(sessions),
+        error: (err) => console.warn('Could not load ticket chat history:', err),
+      });
+    });
+  }
+
+  // ── rendering ──────────────────────────────────────────────────────────────
 
   renderBotMarkdown(text: string): SafeHtml {
     const renderedMarkdown = marked.parse(text, {
@@ -51,10 +122,18 @@ export class TicketChatComponent {
     return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtml);
   }
 
+  /** Returns a short relative label like "Today", "Yesterday", or a date. */
+  sessionDateLabel(isoDate: string): string {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
   clearChat(): void {
-    this.messages.set([]);
-    this.error.set(null);
-    this.messageInput.set('');
+    this.newChat();
   }
 
   sendMessage(): void {
@@ -67,16 +146,26 @@ export class TicketChatComponent {
     this.error.set(null);
     this.startLoadingSequence();
 
-    this.ticketChatService.sendMessage(message).subscribe({
-      next: (response) => {
-        this.messages.update((msgs) => [...msgs, { text: response.reply, sender: 'bot' }]);
-        this.finishLoadingState();
-      },
-      error: (err) => {
-        this.error.set(this.formatError(err));
-        this.finishLoadingState();
-        console.error('Ticket chat error:', err);
-      },
+    this.authFacade.rawToken$.pipe(take(1)).subscribe((token) => {
+      this.ticketChatService.sendMessage(message, token, this.activeChatId()).subscribe({
+        next: (response) => {
+          this.messages.update((msgs) => [...msgs, { text: response.reply, sender: 'bot' }]);
+
+          if (response.chatId && !this.activeChatId()) {
+            this.activeChatId.set(response.chatId);
+            this.loadChatHistory();
+          } else if (response.chatId) {
+            this.activeChatId.set(response.chatId);
+          }
+
+          this.finishLoadingState();
+        },
+        error: (err) => {
+          this.error.set(this.formatError(err));
+          this.finishLoadingState();
+          console.error('Ticket chat error:', err);
+        },
+      });
     });
   }
 
@@ -84,12 +173,12 @@ export class TicketChatComponent {
 
   private startLoadingSequence(): void {
     this.clearLoadingTimeouts();
-    this.loadingLabel.set('Searching tickets');
+    this.loadingLabel.set('Analyzing question');
 
     const phases: Array<[number, string]> = [
-      [3000, 'Querying database'],
-      [9000, 'Analyzing ticket data with AI'],
-      [18000, 'Generating response'],
+      [3000, 'Generating SQL query'],
+      [9000, 'Querying database'],
+      [18000, 'Formatting answer with AI'],
       [35000, 'Still working, this may take a moment'],
     ];
 
@@ -101,7 +190,7 @@ export class TicketChatComponent {
 
   private finishLoadingState(): void {
     this.clearLoadingTimeouts();
-    this.loadingLabel.set('Searching tickets');
+    this.loadingLabel.set('Analyzing question');
     this.isLoading.set(false);
   }
 
