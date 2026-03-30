@@ -65,13 +65,16 @@ const FORBIDDEN_KEYWORDS = [
   'GRANT',
   'REVOKE',
   'CALL',
-  'LOAD ',
-  'SET ',
+  'LOAD',
+  'SET',
 ];
 
 /**
  * Validates that a SQL string is a read-only SELECT statement.
  * Throws if any mutation keyword is detected.
+ *
+ * Uses word-boundary regex so column names like `created_at`
+ * don't falsely match `CREATE`.
  */
 export function validateSelectOnly(sql: string): void {
   const upper = sql.trim().replace(/\s+/g, ' ').toUpperCase();
@@ -81,8 +84,9 @@ export function validateSelectOnly(sql: string): void {
   }
 
   for (const kw of FORBIDDEN_KEYWORDS) {
-    if (upper.includes(kw)) {
-      throw new Error(`Forbidden SQL keyword detected: ${kw.trim()}`);
+    const pattern = new RegExp(`\\b${kw}\\b`);
+    if (pattern.test(upper)) {
+      throw new Error(`Forbidden SQL keyword detected: ${kw}`);
     }
   }
 }

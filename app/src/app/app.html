@@ -1,12 +1,1 @@
-@if (auth.isLoading$ | async) {
-  <section class="app-loading-shell">
-    <div class="app-loading-card">
-      <div class="spinner"></div>
-      <p>Loading authentication...</p>
-    </div>
-  </section>
-} @else if ((auth.isAuthenticated$ | async) && auth.isConfigured) {
-  <app-workspace></app-workspace>
-} @else {
-  <app-login></app-login>
-}
+<router-outlet></router-outlet>

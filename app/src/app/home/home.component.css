@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.app-loading-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #e0f2fe 0%, #f8fafc 100%);
+}
+
+.app-loading-card {
+  display: grid;
+  place-items: center;
+  gap: 0.8rem;
+  padding: 1.5rem 2rem;
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.app-loading-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.spinner {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 3px solid #cbd5e1;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
