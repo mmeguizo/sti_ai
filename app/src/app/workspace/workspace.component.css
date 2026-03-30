@@ -112,6 +112,40 @@
   flex-wrap: wrap;
 }
 
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.workspace-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+}
+
+.tab-btn {
+  padding: 0.7rem 1.3rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.tab-btn:hover {
+  color: #0f172a;
+}
+
+.tab-btn.active {
+  color: #0f172a;
+  border-bottom-color: #2563eb;
+}
+
+.tab-btn.active:nth-child(2) {
+  border-bottom-color: #0f766e;
+}
+
 .chat-stage {
   min-height: 0;
   padding: 0 1.5rem 1.5rem;

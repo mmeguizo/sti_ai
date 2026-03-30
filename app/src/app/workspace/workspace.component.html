@@ -43,8 +43,25 @@
     @if (appUser.role === 'admin' && isAdminView) {
       <app-admin-users></app-admin-users>
     } @else {
+      <nav class="workspace-tabs">
+        <button class="tab-btn" [class.active]="activeTab === 'chat'" (click)="setTab('chat')">
+          General AI Chat
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'tickets'"
+          (click)="setTab('tickets')"
+        >
+          IT Support Tickets
+        </button>
+      </nav>
+
       <div class="chat-stage">
-        <app-chat></app-chat>
+        @if (activeTab === 'chat') {
+          <app-chat></app-chat>
+        } @else {
+          <app-ticket-chat></app-ticket-chat>
+        }
       </div>
     }
   </section>

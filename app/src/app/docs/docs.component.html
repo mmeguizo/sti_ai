@@ -1,0 +1,14 @@
+<section class="docs-page">
+  <header class="docs-header">
+    <h1>Project Documentation</h1>
+    <p>Public app docs rendered from the repository documentation file.</p>
+  </header>
+
+  @if (loading()) {
+    <div class="docs-state">Loading docs...</div>
+  } @else if (error()) {
+    <div class="docs-state docs-error">{{ error() }}</div>
+  } @else {
+    <article class="docs-content" [innerHTML]="rendered()"></article>
+  }
+</section>

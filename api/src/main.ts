@@ -23,6 +23,7 @@ async function bootstrap() {
   const allowedOrigins = new Set<string>([
     'http://localhost:4200',
     'http://127.0.0.1:4200',
+    'https://10.100.168.9:4200',
     ...parseConfiguredOrigins(),
   ]);
 
